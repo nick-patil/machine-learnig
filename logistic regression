@@ -1,0 +1,81 @@
+
+# =============================================================================
+# Online Ad Click Prediction Model
+# =============================================================================
+
+
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import os
+
+os.chdir(r"D:\nikhil\Logistic Regression")
+
+df=pd.read_csv("advertising.csv")
+
+df["TimeStamp"]=pd.to_datetime(df["Timestamp"])
+df["Hour"]=df["TimeStamp"].apply(lambda x: x.hour)
+df["Minute"]=df["TimeStamp"].apply(lambda x: x.minute)
+df["Timeaccess"]=df["Hour"]*60+df["Minute"]
+
+
+country_dist=pd.DataFrame(df["Country"].groupby(by=df["Country"]).count())
+country_dist.rename(columns={"Country":"Count"},inplace=True)
+country_dist.reset_index(inplace=True,drop=False)
+country_dist.sort_values("Count",ascending=False,inplace=True)
+
+# =============================================================================
+# Basic Logistic Regression
+# =============================================================================
+
+
+data=df[['Daily Time Spent on Site',"Age","Area Income","Daily Internet Usage","Male","Timeaccess","Clicked on Ad"]]
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+dependent=data["Clicked on Ad"]
+feature=data.iloc[:,0:len(data.columns)-1]
+x_train,x_test,y_train,y_test=train_test_split(feature,dependent,test_size=0.3,random_state=2)
+
+
+lm=LogisticRegression(verbose=1)
+lm.fit(x_train,y_train)
+
+y_pred=lm.predict(x_test)
+
+
+from sklearn.metrics import confusion_matrix
+
+confusion_matrix(y_test,y_pred)
+tn, fp, fn, tp = confusion_matrix(y_test, y_pred).ravel()
+
+
+
+# =============================================================================
+# Model evaluation Metrics
+# =============================================================================
+
+precision=tp/(tp+fp)
+recall=tp/(tp+fn)
+
+print("The Precision of the Model is : {} " .format(precision))
+print("The Recall of the Model is : {}".format(recall))
+
+
+# =============================================================================
+# ROC Curve
+# =============================================================================
+import sklearn.metrics as metrics
+# calculate the fpr and tpr for all thresholds of the classification
+probs = lm.predict_proba(x_test)
+preds = probs[:,1]
+fpr, tpr, threshold = metrics.roc_curve(y_test, preds)
+roc_auc = metrics.auc(fpr, tpr)
+plt.title('Receiver Operating Characteristic')
+plt.plot(fpr, tpr, 'b', label = 'AUC = %0.2f' % roc_auc)
+plt.legend(loc = 'lower right')
+plt.plot([0, 1], [0, 1],'r--')
+plt.xlim([0, 1])
+plt.ylim([0, 1])
+plt.ylabel('True Positive Rate')
+plt.xlabel('False Positive Rate')
+plt.show()
